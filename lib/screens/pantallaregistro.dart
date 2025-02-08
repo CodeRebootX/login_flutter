@@ -3,56 +3,64 @@ import 'package:inicio_sesion/models/user.dart';
 import 'package:inicio_sesion/logica/logica.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:numberpicker/numberpicker.dart';
 
 class MyRegisterPage extends StatefulWidget {
   const MyRegisterPage ({super.key});
   @override
-  State<MyRegisterPage> createState() => _MyHomePageState();
+  State<MyRegisterPage> createState() => _MyRegisterPageState();
 }
 
-class _MyHomePageState extends State<MyRegisterPage> {
+class _MyRegisterPageState extends State<MyRegisterPage> {
   
   final _formKey = GlobalKey<FormState>();
-
-  String? _trato;
-  File? _imagen;
-  int? _edad;
-  String _usuario = "";
-  String _password = "";
-  String _repitePassword = "";
-  String _lugarNacimiento = "";
-  bool _aceptaTerminos = false;
-
+  final TextEditingController _userController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _birthplaceController = TextEditingController();
+  int _selectedAge = 20;
+  String _selectedTitle= 'Sr.';
+  File? _image;
+  bool _acceptTerms = false;
   final ImagePicker _picker = ImagePicker();
 
-  // Método para seleccionar imagen
-  Future<void> _seleccionarImagen() async {
+  Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
-        _imagen = File(pickedFile.path);
+        _image = File(pickedFile.path);
       });
     }
   }
 
-  // Método para registrar usuario
-  void _registrarUsuario() {
-    if (_formKey.currentState!.validate()) {
-      if (!_aceptaTerminos) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Debes aceptar los términos y condiciones")),
-        );
-        return;
-      }
-
-      // Guardamos el usuario en la lógica
-      User nuevoUsuario = User(nombre: _usuario, pass: _password);
-      Logica.aniadirUser(nuevoUsuario);
-
-      // Cerrar el diálogo y mostrar confirmación
-      Navigator.of(context).pop();
+  void _registerUser() {
+    if (_formKey.currentState!.validate() && _acceptTerms) {
+      Logica.aniadirUser(
+        User(
+          nombre: _userController.text,
+          pass: _passwordController.text,
+          trato: _selectedTitle,
+          edad: _selectedAge,
+          imagen: _image?.path ?? '',
+          lugarNacimiento: _birthplaceController.text
+      ));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Usuario registrado con éxito")),
+        SnackBar(content: Text('Usuario registrado exitosamente')),
+      );
+      Navigator.pop(context);
+    } else if (_formKey.currentState!.validate() &&!_acceptTerms) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(''),
+          content: Text('Debes aceptar los términos y condiciones'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Volver')
+            ),
+          ],
+        )
       );
     }
   }
@@ -60,92 +68,102 @@ class _MyHomePageState extends State<MyRegisterPage> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text("Registro de Usuario"),
+      title: Text('Registro de Usuario'),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Trato
-              DropdownButtonFormField<String>(
-                value: _trato,
-                decoration: InputDecoration(labelText: "Trato"),
-                items: ["Sr.", "Sra."].map((String value) {
-                  return DropdownMenuItem(value: value, child: Text(value));
-                }).toList(),
-                onChanged: (value) => setState(() => _trato = value),
-                validator: (value) => value == null ? "Seleccione un trato" : null,
+              Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Radio<String>(
+                        value: 'Sr.',
+                        groupValue: _selectedTitle,
+                        onChanged: (value) => setState(() => _selectedTitle = value!),
+                      ),
+                      Text('Sr.'),
+                      Radio<String>(
+                        value: 'Sra.',
+                        groupValue: _selectedTitle,
+                        onChanged: (value) => setState(() => _selectedTitle = value!),
+                      ),
+                      Text('Sra.'),
+                    ],
+                  ),
+                ],
               ),
-              
-              // Imagen
+              SizedBox(height: 10),
               GestureDetector(
-                onTap: _seleccionarImagen,
+                onTap: _pickImage,
                 child: CircleAvatar(
                   radius: 40,
-                  backgroundImage: _imagen != null ? FileImage(_imagen!) : null,
-                  child: _imagen == null ? Icon(Icons.camera_alt, size: 40) : null,
+                  backgroundImage: _image != null ? FileImage(_image!) : null,
+                  child: _image == null ? Icon(Icons.camera_alt, size: 40) : null,
                 ),
               ),
               SizedBox(height: 10),
-
-              // Edad
               TextFormField(
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: "Edad"),
-                onChanged: (value) => setState(() => _edad = int.tryParse(value)),
-                validator: (value) {
-                  if (value == null || value.isEmpty) return "Ingrese su edad";
-                  final edad = int.tryParse(value);
-                  if (edad == null || edad < 18) return "Debe ser mayor de 18 años";
-                  return null;
-                },
+                controller: _userController,
+                decoration: InputDecoration(labelText: 'Usuario'),
+                validator: (value) => value!.isEmpty ? 'Ingrese un usuario' : null,
               ),
-
-              // Usuario
+              SizedBox(height: 10),
               TextFormField(
-                decoration: InputDecoration(labelText: "Usuario"),
-                onChanged: (value) => setState(() => _usuario = value),
-                validator: (value) => value!.isEmpty ? "Ingrese un usuario" : null,
-              ),
-
-              // Contraseña
-              TextFormField(
+                controller: _passwordController,
                 obscureText: true,
-                decoration: InputDecoration(labelText: "Contraseña"),
-                onChanged: (value) => setState(() => _password = value),
-                validator: (value) => value!.length < 6 ? "Mínimo 6 caracteres" : null,
+                decoration: InputDecoration(labelText: 'Contraseña'),
+                validator: (value) => value!.length < 6 ? 'Mínimo 6 caracteres' : null,
               ),
-
-              // Repetir Contraseña
+              SizedBox(height: 10),
               TextFormField(
+                controller: _confirmPasswordController,
                 obscureText: true,
-                decoration: InputDecoration(labelText: "Repite Contraseña"),
-                onChanged: (value) => setState(() => _repitePassword = value),
-                validator: (value) => value != _password ? "Las contraseñas no coinciden" : null,
+                decoration: InputDecoration(labelText: 'Repite Contraseña'),
+                validator: (value) => value != _passwordController.text ? 'Las contraseñas no coinciden' : null,
               ),
-
-              // Lugar de nacimiento
-              TextFormField(
-                decoration: InputDecoration(labelText: "Lugar de Nacimiento"),
-                onChanged: (value) => setState(() => _lugarNacimiento = value),
-                validator: (value) => value!.isEmpty ? "Ingrese su lugar de nacimiento" : null,
+              SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                value: 'Zaragoza',
+                decoration: InputDecoration(labelText: 'Lugar de Nacimiento'),
+                items: [
+                  'A Coruña', 'Albacete', 'Alicante', 'Almería', 'Ávila', 'Badajoz', 'Barcelona', 'Bilbao', 'Burgos',
+                  'Cáceres', 'Cádiz', 'Castellón', 'Ciudad Real', 'Córdoba', 'Cuenca', 'Girona', 'Granada', 'Guadalajara',
+                  'Huelva', 'Huesca', 'Jaén', 'La Rioja', 'Las Palmas', 'León', 'Lleida', 'Lugo', 'Madrid', 'Málaga',
+                  'Murcia', 'Ourense', 'Oviedo', 'Palencia', 'Pamplona', 'Pontevedra', 'Salamanca', 'San Sebastián',
+                  'Santander', 'Segovia', 'Sevilla', 'Soria', 'Tarragona', 'Teruel', 'Toledo', 'Valencia', 'Valladolid',
+                  'Vitoria', 'Zamora', 'Zaragoza'
+                ].map((city) {
+                  return DropdownMenuItem(value: city, child: Text(city));
+                }).toList(),
+                onChanged: (value) => setState(() => _birthplaceController.text = value!),
               ),
-
-              // Términos y Condiciones
+              SizedBox(height: 10),
+              Text('Edad', style: TextStyle(fontSize: 18),),
+              NumberPicker(
+                value: _selectedAge,
+                minValue: 18,
+                maxValue: 60,
+                onChanged: (value) => setState(() => _selectedAge = value),
+                textStyle: TextStyle(fontSize: 10),
+                selectedTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 10),
               Row(
                 children: [
                   Checkbox(
-                    value: _aceptaTerminos,
-                    onChanged: (value) => setState(() => _aceptaTerminos = value!),
+                    value: _acceptTerms,
+                    onChanged: (value) => setState(() => _acceptTerms = value!),
                   ),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => setState(() => _aceptaTerminos = !_aceptaTerminos),
-                      child: Text(
-                        "Acepto los términos y condiciones",
-                        style: TextStyle(decoration: TextDecoration.underline),
-                      ),
+                      onTap: () => setState(() => _acceptTerms = !_acceptTerms),
+                      child: Text('Acepto los términos y condiciones',
+                          style: TextStyle(decoration: TextDecoration.underline)),
                     ),
                   ),
                 ],
@@ -155,8 +173,8 @@ class _MyHomePageState extends State<MyRegisterPage> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text("Cancelar")),
-        ElevatedButton(onPressed: _registrarUsuario, child: Text("Registrar")),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancelar')),
+        ElevatedButton(onPressed: _registerUser,   child: Text('Registrar')),
       ],
     );
   }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:inicio_sesion/screens/pantallaprincipal.dart';
 
@@ -28,7 +30,7 @@ class _MyHomePageState extends State<MyStartedPage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.login),
+              leading: Icon(Icons.person),
               title: const Text('Mi perfil'),
               onTap: (){
 
@@ -38,7 +40,7 @@ class _MyHomePageState extends State<MyStartedPage> {
               leading: Icon(Icons.login),
               title: const Text('Salir'),
               onTap: (){
-
+                exit(0);
               },
             ),
           ],
@@ -52,7 +54,17 @@ class _MyHomePageState extends State<MyStartedPage> {
               onPressed: (){
 
               },
-              child: const Text('Pantalla Principal')
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.home),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 15),
+                    child: Text('Pantalla Principal'),
+                  )
+                ],
+              )
+              
             ),
           ],
         ),
